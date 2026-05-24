@@ -236,12 +236,21 @@ title: {title}
             return
 
         os.system(f"make gds CELL={cell} LIB={library}")
+        os.system(f"make lplot CELL={cell} LIB={library}")
+        # Layout preview: SVG produced by `make lplot` (gdstk + sky130A.tech colors).
+        svg_rel = None
+        if os.path.exists(f"lplot/{cell}.svg"):
+            os.system(f"cp lplot/{cell}.svg ../docs/assets/")
+            svg_rel = f"assets/{cell}.svg"
         os.system(f"cp gds/{cell}.gds ../docs/assets")
         os.system(f"test -d ../../GDS2glTF && python3 ../../GDS2glTF/gds2gltf.py gds/{cell}.gds")
 
         buff = self.header.replace("{title}","Layout")
 
         library_lc = library.lower()
+
+        if svg_rel:
+            buff += f"\n![Layout of {cell}](/{library_lc}/{svg_rel})\n\n"
 
         buff += f"""
 
@@ -304,11 +313,13 @@ title: {title}
 
     def _doc_sections(self):
         """Return list of (title, path) for docs to combine, in order. Path relative to docdir."""
+        # layout.md is intentionally excluded — its content is just links to
+        # GDS/glTF/3D-viewer files that can't be embedded in a PDF. The page
+        # is still produced by makeGds() for the Jekyll site.
         order = [
             ("index.md", "Overview"),
             ("install.md", "Install"),
             ("schematic.md", "Schematics"),
-            ("layout.md", "Layout"),
             ("simulations.md", "Simulations"),
         ]
         out = []

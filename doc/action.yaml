@@ -44,6 +44,13 @@ runs:
       - name: Install cicsim
         shell: bash
         run:  python3 -m pip install cicsim
+      - name: Install layout-render deps
+        shell: bash
+        # gdstk drives the GDS->SVG layout preview produced by `make lplot`
+        # (tech/magic/render_gds.py). pandoc + texlive + librsvg-bin / magick
+        # are assumed to already be in the runner image (used by gendoc for
+        # PDF generation and SVG->EPS conversion).
+        run:  python3 -m pip install gdstk
       - name: Run docs
         shell: bash
         run: |
