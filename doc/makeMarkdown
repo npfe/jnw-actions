@@ -278,14 +278,38 @@ title: {title}
                 break
         return "\n".join(lines[start:])
 
+    def _strip_jekyll_directives(self, text):
+        """Remove Kramdown/Jekyll-only directives that have no meaning outside Jekyll
+        (auto-TOC markers, attribute lists). Otherwise they render as literal text
+        in the combined PDF."""
+        out_lines = []
+        for line in text.split("\n"):
+            s = line.strip()
+            # `* TOC` followed (next line) by `{:toc}` is Kramdown's auto-TOC marker.
+            if s in ("* TOC", "{:toc}") or re.match(r"^\{:toc\s*\}$", s):
+                continue
+            # `* TOC {:toc}` on one line.
+            if re.match(r"^\*\s*TOC\s*\{:toc\s*\}\s*$", s):
+                continue
+            out_lines.append(line)
+        return "\n".join(out_lines)
+
+    def _schematic_libs(self):
+        """Library names that hold schematics — used to recognise schematic images
+        by their path prefix in combined.md."""
+        libs = self._get("doc.libraries", self.options)
+        if isinstance(libs, dict):
+            return list(libs.keys())
+        return []
+
     def _doc_sections(self):
         """Return list of (title, path) for docs to combine, in order. Path relative to docdir."""
         order = [
             ("index.md", "Overview"),
             ("install.md", "Install"),
             ("schematic.md", "Schematics"),
-            ("simulations.md", "Simulations"),
             ("layout.md", "Layout"),
+            ("simulations.md", "Simulations"),
         ]
         out = []
         for fname, title in order:
@@ -304,6 +328,7 @@ title: {title}
             for i, (title, path) in enumerate(sections):
                 with open(path) as fi:
                     content = self._strip_frontmatter(fi.read())
+                content = self._strip_jekyll_directives(content)
                 if i > 0:
                     fo.write("\n\n---\n\n")
                     fo.write("## " + title + "\n\n")
@@ -413,6 +438,29 @@ title: {title}
         with open(combined_path) as f:
             content = f.read()
 
+        content = self._strip_jekyll_directives(content)
+
+        # Drop the injected "# Overview" heading at the very top — the README
+        # content following it carries its own section heading, and the PDF
+        # has no use for a duplicate top-level title.
+        content = re.sub(r'^\s*#\s+Overview\s*\n+', '', content)
+
+        # Drop GitHub Actions workflow badges and links — they render as a wall
+        # of "X workflow" text in the PDF and aren't useful offline.
+        workflow_img_re = re.compile(r'!\[[^\]]*\]\([^)]*/actions/workflows/[^)]+\)')
+        content = workflow_img_re.sub("", content)
+        workflow_link_re = re.compile(r'\[[^\]]*\]\([^)]*/actions/workflows/[^)]+\)')
+        content = workflow_link_re.sub("", content)
+
+        # Schematic SVGs live under one of the design libraries; we frame them
+        # and force them to fit the page. Other SVGs (FSMs, plots, etc.) just
+        # get a width cap so they don't overflow the column.
+        sch_libs = self._schematic_libs()
+
+        def _is_schematic(path_rel):
+            head = path_rel.split("/", 1)[0]
+            return head in sch_libs
+
         # Find all ![](...svg) or ![...](...svg)
         img_re = re.compile(r'!\[([^\]]*)\]\(([^)]+\.svg)\)')
         replacements = []
@@ -421,7 +469,16 @@ title: {title}
             path_rel = path.split("?")[0].strip()
             fig_rel = self._convert_svg_to_fig(docdir, path_rel, media_pdf_dir)
             if fig_rel:
-                replacements.append((m.group(0), "![" + alt + "](" + fig_rel + ")"))
+                if _is_schematic(path_rel):
+                    # Raw LaTeX: framed, fits column width and bounded height,
+                    # preserving aspect ratio. Blank lines around the block
+                    # keep pandoc from wrapping it in a paragraph.
+                    new = ("\n\n\\begin{center}\\fbox{\\includegraphics"
+                           "[width=0.95\\linewidth,height=0.45\\textheight,"
+                           "keepaspectratio]{" + fig_rel + "}}\\end{center}\n\n")
+                else:
+                    new = "![" + alt + "](" + fig_rel + "){ width=100% }"
+                replacements.append((m.group(0), new))
             else:
                 replacements.append((m.group(0), "\n[Image: SVG not converted]\n"))
         for old, new in replacements:
@@ -429,11 +486,23 @@ title: {title}
 
         # Replace remote (http/https) image links with text placeholder so pdflatex
         # does not try to \includegraphics{https://...} (it cannot fetch URLs).
+        # Do this BEFORE the raster width cap so we don't decorate a URL we're
+        # about to demote to a plain link.
         remote_img_re = re.compile(r'!\[([^\]]*)\]\((https?://[^)]+)\)')
         for m in remote_img_re.finditer(content):
             alt, url = m.group(1), m.group(2)
             placeholder = "\n[Image: %s](%s)\n" % (alt or "remote", url)
             content = content.replace(m.group(0), placeholder, 1)
+
+        # Cap raster image widths (PNG/JPG copied from README etc.) so
+        # natively-large images do not run off the page. Skip http(s) URLs
+        # (already turned into link placeholders above) and images that
+        # already carry a pandoc attribute block.
+        raster_re = re.compile(
+            r'!\[([^\]]*)\]\((?!https?://)([^)]+\.(?:png|jpg|jpeg|pdf|eps))\)(?!\{)',
+            re.IGNORECASE,
+        )
+        content = raster_re.sub(r'![\1](\2){ width=100% }', content)
 
         link_placeholder_re = re.compile(r'\[\s*\[Image: SVG not converted\]\s*\]\s*\(([^)]+)\)')
         def _link_sub(m):
@@ -473,7 +542,7 @@ title: {title}
         if(not os.path.exists("../README.md")):
             return
         url = "https://github.com/" + self._get("github",self.options) + "/" + self._get("library",self.options).lower()
-        rurl = "https://raw.githubusercontent.com/"  + self._get("github",self.options) + "/" + self._get("library",self.options) +  "/refs/heads/main/"
+        rurl = "https://raw.githubusercontent.com/"  + self._get("github",self.options) + "/" + self._get("library",self.options).lower() +  "/refs/heads/main/"
         with open("../docs/index.md","w") as fo:
             fo.write("---\n")
             fo.write("layout: home\n")
@@ -488,7 +557,22 @@ title: {title}
                         if(m):
                             ourl = m.groups()[0]
                             if(not (ourl.startswith("http://") or ourl.startswith("https://") or ourl.startswith("www") )) :
-                                line = line.replace("(" + ourl + ")", "(" + rurl+ ourl + ")")
+                                # Copy referenced image into docs/ preserving the relative path
+                                # so both Jekyll and pdflatex can resolve it locally. Fall back
+                                # to rewriting to the raw GitHub URL if the source is missing.
+                                src = os.path.normpath(os.path.join("..", ourl.split("?")[0]))
+                                dst = os.path.normpath(os.path.join(self.docdir, ourl.split("?")[0]))
+                                if os.path.exists(src):
+                                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                                    try:
+                                        import shutil
+                                        shutil.copy2(src, dst)
+                                    except Exception as e:
+                                        print(f"Warning: failed to copy {src} -> {dst}: {e}")
+                                        line = line.replace("(" + ourl + ")", "(" + rurl+ ourl + ")")
+                                else:
+                                    print(f"Warning: README image not found locally: {src}; using remote URL")
+                                    line = line.replace("(" + ourl + ")", "(" + rurl+ ourl + ")")
 
                         else:
                             m = re.search(r"\[[^\]]*\]\(([^\)]+)\)",line)
