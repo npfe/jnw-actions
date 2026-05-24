@@ -21,7 +21,7 @@ cd ..
 test -d media && cp -r media docs/
 test -d documents && cp -r documents/* docs/
 
-if [[ -f docs/assets/combined_latex.md ]] && command -v pandoc >/dev/null 2>&1; then
+if [[ -f work/combined_latex.md ]] && command -v pandoc >/dev/null 2>&1; then
     echo "INFO: Building PDF from combined_latex.md (pandoc + pdflatex, IEEEtran)"
     TPLDIR="${DOC_SCRIPT_PATH}/templates"
     [[ -d "$TPLDIR" ]] && TPLDIR="$(cd "$TPLDIR" && pwd)"
@@ -34,7 +34,7 @@ if [[ -f docs/assets/combined_latex.md ]] && command -v pandoc >/dev/null 2>&1; 
         -V classoption=journal \
         -V title="${PDFTITLE}" \
         -H "${TPLDIR}/pandoc_header_ieee.tex" \
-        -o assets/combined.tex assets/combined_latex.md) || true
+        -o assets/combined.tex ../work/combined_latex.md) || true
     if [[ -f docs/assets/combined.tex ]]; then
         # Simulations section is full-width single-column (wide plots, tables).
         sed -e '/\\subsection{Simulations}/i\
