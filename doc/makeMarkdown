@@ -243,8 +243,10 @@ title: {title}
             os.system(f"cp lplot/{cell}.svg ../docs/assets/")
             svg_rel = f"assets/{cell}.svg"
         os.system(f"cp gds/{cell}.gds ../docs/assets")
-        os.system(f"test -d ../../GDS2glTF && python3 ../../GDS2glTF/gds2gltf.py gds/{cell}.gds")
-
+        try:
+            os.system(f"test -d ../../GDS2glTF && python3 ../../GDS2glTF/gds2gltf.py gds/{cell}.gds")
+        except Exception as e:
+            print(e)
         buff = self.header.replace("{title}","Layout")
 
         library_lc = library.lower()
@@ -334,7 +336,7 @@ title: {title}
         sections = self._doc_sections()
         if not sections:
             return
-        combined_path = self.docdir + os.path.sep + "combined.md"
+        combined_path = "combined.md"
         with open(combined_path, "w") as fo:
             for i, (title, path) in enumerate(sections):
                 with open(path) as fi:
@@ -438,13 +440,13 @@ title: {title}
         """Build combined_latex.md from combined.md with SVGs converted to EPS or PDF."""
         docdir = self.docdir
         if combined_path is None:
-            combined_path = os.path.join(docdir, "combined.md")
+            combined_path =  "combined.md"
         if not os.path.exists(combined_path):
             print("Warning: combined.md not found; run makeCombinedMarkdown first.")
             return
         media_pdf_dir = os.path.join(docdir, "assets", "media_pdf")
         if out_path is None:
-            out_path = os.path.join(docdir, "assets", "combined_latex.md")
+            out_path = "combined_latex.md"
 
         with open(combined_path) as f:
             content = f.read()
@@ -525,7 +527,7 @@ title: {title}
         content = link_placeholder_re.sub(_link_sub, content)
 
         content = unicode_to_latex(content)
-        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        #os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, "w") as f:
             f.write(content)
         doc = self.options.get("doc") or {}
@@ -683,7 +685,7 @@ title: {title}
             tex_out = os.path.join(output_dir, basename + ".tex")
 
             pandoc_cmd = (
-                "pandoc --citeproc --bibliography=%s --csl=%s -o %s %s"
+                "pandoc --data-dir ../ --citeproc --bibliography=%s --csl=%s -o %s %s"
                 % (bibliography, csl, latex_out, md_path)
             )
 
