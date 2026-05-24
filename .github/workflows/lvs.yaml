@@ -7,7 +7,7 @@ jobs:
   lvs:
     runs-on: ubuntu-latest
     container:
-      image: wulffern/aicex:26.04_0.1.7
+      image: wulffern/aicex:26.04_0.1.8
       options: --user root
     steps:
       - name: Checkout
