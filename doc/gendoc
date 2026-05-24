@@ -42,6 +42,8 @@ if [[ -f docs/assets/combined_latex.md ]] && command -v pandoc >/dev/null 2>&1; 
 ' docs/assets/combined.tex > docs/assets/combined.tex.tmp && mv docs/assets/combined.tex.tmp docs/assets/combined.tex
         if [[ -z "${SKIP_PDFLATEX}" ]]; then
             (cd docs && TEXINPUTS=".:${TPLDIR}:${TEXINPUTS:-}" pdflatex -interaction=nonstopmode -output-directory=assets assets/combined.tex) || echo "WARNING: pdflatex failed"
+            # Clean up the LaTeX-only intermediate Markdown once the PDF is built.
+            [[ -f docs/assets/combined.pdf ]] && rm -f docs/assets/combined_latex.md
         else
             echo "INFO: Skipping pdflatex (SKIP_PDFLATEX is set)"
         fi
