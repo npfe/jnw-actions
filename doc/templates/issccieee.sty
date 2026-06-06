@@ -1,0 +1,185 @@
+%% issccieee.sty -- ISSCC-like final-paper helpers for IEEEtran
+%% This is not an official ISSCC/IEEE style file.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{issccieee}[2026/06/06 v0.4 ISSCC-like IEEEtran helper style]
+
+\RequirePackage[
+  paperwidth=8.25in,
+  paperheight=10.75in,
+  top=0.55in,
+  bottom=0.32in,
+  left=0.48in,
+  right=0.48in
+]{geometry}
+\RequirePackage{graphicx}
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{booktabs}
+\RequirePackage{cite}
+\RequirePackage{siunitx}
+\RequirePackage{xcolor}
+\RequirePackage{caption}
+\RequirePackage{subcaption}
+\RequirePackage{setspace}
+\RequirePackage{balance}
+\RequirePackage{etoolbox}
+\RequirePackage{fancyhdr}
+\RequirePackage{helvet}
+\RequirePackage{eso-pic}
+
+\setlength{\columnsep}{0.20in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.42em}
+\setlength{\headheight}{27pt}
+\setlength{\headsep}{8pt}
+\captionsetup{font=scriptsize,labelfont=bf,labelsep=colon}
+\renewcommand{\figurename}{Fig.}
+\renewcommand{\tablename}{TABLE}
+
+\makeatletter
+\newcommand{\issccrunninghead}{\@title}
+\makeatother
+\newcommand{\issccsetrunninghead}[1]{\renewcommand{\issccrunninghead}{#1}}
+
+\AddToShipoutPictureBG{%
+  \AtPageUpperLeft{%
+    \raisebox{-0.50in}[0pt][0pt]{%
+      \color{black!15}\rule{\paperwidth}{0.50in}}}%
+  \AtPageUpperLeft{%
+    \raisebox{-0.50in}[0pt][0pt]{%
+      \color{black}\rule{\paperwidth}{1.2pt}}}%
+}
+
+\fancypagestyle{issccdigest}{%
+  \fancyhf{}%
+  \fancyhead[C]{\sffamily\bfseries\small\issccrunninghead}%
+  \fancyfoot[C]{\sffamily\scriptsize\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{1.2pt}%
+}
+
+\AtBeginDocument{%
+  \pagestyle{issccdigest}%
+  \thispagestyle{issccdigest}%
+  \singlespacing%
+}
+
+\makeatletter
+\renewcommand{\maketitle}{%
+  \begingroup
+    \raggedright
+    {\sffamily\bfseries\fontsize{10.5}{12}\selectfont\@title\par}%
+    \ifx\@author\@empty\else
+      \vspace{0.55em}%
+      {\sffamily\fontsize{8.5}{10}\selectfont\@author\par}%
+    \fi
+    \vspace{0.75em}%
+  \endgroup
+}
+\renewcommand\section{\@startsection{section}{1}{0pt}%
+  {0.8ex plus 0.3ex minus 0.2ex}%
+  {0.35ex plus 0.1ex}%
+  {\centering\sffamily\bfseries\footnotesize\MakeUppercase}}
+\renewcommand\subsection{\@startsection{subsection}{2}{0pt}%
+  {0.7ex plus 0.2ex minus 0.2ex}%
+  {0.25ex plus 0.1ex}%
+  {\sffamily\bfseries\footnotesize}}
+\makeatother
+
+\AtBeginEnvironment{thebibliography}{%
+  \footnotesize%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+\newcommand{\issccanonymousauthor}{%
+  \author{Anonymous Authors}%
+}
+
+\newenvironment{issccmanuscript}[1][1]{%
+  \begin{spacing}{#1}%
+}{%
+  \end{spacing}%
+}
+
+\makeatletter
+\newsavebox{\issccfigurebox}
+\newsavebox{\issccpendingfigurebox}
+\newcount\issccfigurecell
+
+\newcommand{\issccfigurepages}{%
+  \clearpage%
+  \singlespacing%
+  \onecolumn%
+  \thispagestyle{issccdigest}%
+  \global\issccfigurecell=0%
+  \setlength{\fboxsep}{6pt}%
+  \setlength{\fboxrule}{0.35pt}%
+  \let\issccoriginalcaption\caption
+  \renewcommand{\caption}[2][]{%
+    \vfill
+    \ifstrempty{##1}{\issccoriginalcaption{##2}}%
+      {\issccoriginalcaption[##1]{##2}}}%
+  \renewenvironment{figure}[1][]{%
+    \global\advance\issccfigurecell by 1%
+    \noindent
+    \def\@captype{figure}%
+    \begin{lrbox}{\issccfigurebox}%
+    \begin{minipage}[t][0.285\textheight][t]{%
+      \dimexpr0.5\textwidth-2\fboxsep-2\fboxrule\relax}%
+    \centering
+  }{%
+    \end{minipage}%
+    \end{lrbox}%
+    \ifodd\issccfigurecell
+      \global\setbox\issccpendingfigurebox=\copy\issccfigurebox
+    \else
+      \noindent
+      \fbox{\usebox{\issccpendingfigurebox}}%
+      \fbox{\usebox{\issccfigurebox}}%
+      \par\nointerlineskip
+    \fi
+  }%
+  \renewcommand*\pandocbounded[1]{%
+    \begingroup
+    \setbox0=\hbox{##1}%
+    \Gscale@div\@tempa{0.225\textheight}{\dimexpr\ht0+\dp0\relax}%
+    \Gscale@div\@tempb{\linewidth}{\wd0}%
+    \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+    \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\box0}\else\box0\fi
+    \endgroup
+  }%
+}
+\makeatother
+
+\newcommand{\issccfig}[4][!t]{%
+  \begin{figure}[#1]
+    \centering
+    \includegraphics[width=\columnwidth]{#2}
+    \caption{#3}
+    \label{#4}
+  \end{figure}%
+}
+
+\newcommand{\issccwidefig}[4][!t]{%
+  \begin{figure*}[#1]
+    \centering
+    \includegraphics[width=0.92\textwidth]{#2}
+    \caption{#3}
+    \label{#4}
+  \end{figure*}%
+}
+
+% Pandoc emits normal figure environments. Capture those figures and restore
+% them, in source order, after all manuscript text and tables.
+\RequirePackage[figuresonly,nomarkers,nolists,noheads]{endfloat}
+\renewcommand{\efloatbegin}{}
+\renewcommand{\efloatseparator}{}
+\renewcommand{\efloatpostamble}{%
+  \ifodd\issccfigurecell
+    \noindent\fbox{\usebox{\issccpendingfigurebox}}\par
+  \fi
+}
+\AtBeginFigures{\issccfigurepages}
+
+\endinput

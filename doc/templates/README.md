@@ -5,6 +5,8 @@ These templates are used by the `makeMarkdown latex` flow and can be referenced 
 ## Contents
 
 - **short_tmplt.tex** – Standalone document wrapper. Placeholders: `__title__`, `__file__` (body `.tex` basename), `__version__`. Uses `\input{pandoc.tex}` and `\input{__file__}` for the body.
+- **issccieee.sty** – ISSCC digest layout with compact two-column text and automatic bordered 2x3 figure sheets at the end.
+- **pandoc_header_isscc.tex** – Pandoc header used by `gendoc` for the ISSCC-like PDF.
 - **pandoc_3.4.tex**, **pandoc_3.6.tex** – Pandoc-generated LaTeX preamble (choose one to match your pandoc version; symlink or copy as `pandoc.tex` where you build).
 - **IEEEtran.cls** – IEEE document class (included so output is consistent; no need to install from CTAN).
 - **aic.bib** – Minimal placeholder bibliography (replace with your own or leave as-is if you don’t use citations).

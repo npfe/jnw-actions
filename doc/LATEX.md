@@ -2,6 +2,12 @@
 
 The `makeMarkdown` script can generate **pandoc** commands and **standalone .tex** files using the same pipeline as the aic2026 lecture PDFs.
 
+The default `gendoc` combined PDF uses `templates/pandoc_header_isscc.tex`.
+It produces a compact ISSCC digest layout modeled on the 2007 paper format:
+a left-column title block, dense double-column text, a gray running header,
+and 594x774-point pages. Text naturally continues onto additional pages.
+Figures are automatically moved to final bordered 2x3 figure sheets.
+
 ## Combined markdown (README + all docs)
 
 The default `makeMarkdown` run also writes **`docs/combined.md`**, which merges in order: Overview (index/README), Install, Schematics (with SVGs), Simulations, Layout. Jekyll frontmatter is stripped. To get a LaTeX-friendly version with SVGs converted to PDF, run:

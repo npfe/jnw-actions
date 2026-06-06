@@ -22,24 +22,20 @@ test -d media && cp -r media docs/
 test -d documents && cp -r documents/* docs/
 
 if [[ -f work/combined_latex.md ]] && command -v pandoc >/dev/null 2>&1; then
-    echo "INFO: Building PDF from combined_latex.md (pandoc + pdflatex, IEEEtran)"
+    echo "INFO: Building PDF from combined_latex.md (ISSCC digest layout)"
     TPLDIR="${DOC_SCRIPT_PATH}/templates"
     [[ -d "$TPLDIR" ]] && TPLDIR="$(cd "$TPLDIR" && pwd)"
     PDFTITLE="Documentation"
     [[ -f info.yaml ]] && PDFTITLE="$(python3 "${DOC_SCRIPT_PATH}/get_pdf_title.py" --info info.yaml)"
     (cd docs && TEXINPUTS=".:${TPLDIR}:${TEXINPUTS:-}" pandoc \
         -V documentclass=IEEEtran \
+        -V fontsize=9pt \
+        -V classoption=conference \
         -V classoption=final \
-        -V classoption=a4paper \
-        -V classoption=journal \
         -V title="${PDFTITLE}" \
-        -H "${TPLDIR}/pandoc_header_ieee.tex" \
+        -H "${TPLDIR}/pandoc_header_isscc.tex" \
         -o assets/combined.tex ../work/combined_latex.md) || true
     if [[ -f docs/assets/combined.tex ]]; then
-        # Simulations section is full-width single-column (wide plots, tables).
-        sed -e '/\\subsection{Simulations}/i\
-\\clearpage\\onecolumn
-' docs/assets/combined.tex > docs/assets/combined.tex.tmp && mv docs/assets/combined.tex.tmp docs/assets/combined.tex
         if [[ -z "${SKIP_PDFLATEX}" ]]; then
             (cd docs && TEXINPUTS=".:${TPLDIR}:${TEXINPUTS:-}" pdflatex -interaction=nonstopmode -output-directory=assets assets/combined.tex) || echo "WARNING: pdflatex failed"
             if [[ -f docs/assets/combined.pdf ]]; then
