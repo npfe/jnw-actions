@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: doc
-        uses: npfe/jnw-actions/doc@main
+        uses: npfe/jnw-actions/doc@643c2cebb5406c6c411ebf8eb917ef3cf100c334
   deploy:
     environment:
       name: github-pages
